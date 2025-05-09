@@ -130,7 +130,9 @@ onMounted(() => {
       </VKFieldInput>
 
       <div class="flex flex-col items-center gap-4 mt-4">
-        <VKCaptcha
+
+        <!--
+        VKCaptcha
           theme="light"
           :error-text="errorTextForCaptcha"
           container-class="w-full flex justify-center"
@@ -140,7 +142,7 @@ onMounted(() => {
           @mounted="() => {
             // TODO: evento para cuando fue cargado el componente de captcha
           }"
-        />
+        -->
 
         <VKAlert
           v-if="showMessage"

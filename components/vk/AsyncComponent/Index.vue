@@ -120,9 +120,12 @@ watch(() => asyncResult.isLoading.value, (isLoading: unknown, oldIsLoading: unkn
   }
 }, { immediate: true })
 
+const handleRetry = (): void => {
+  asyncResult.retry()
+}
+
 // Para ser mostrado en las herramientas de desarrollo de Vue
 defineExpose({
-  retry: asyncResult.retry,
   error: asyncResult.error,
   isLoading: asyncResult.isLoading,
   hasError: asyncResult.hasError,
@@ -141,7 +144,7 @@ defineExpose({
           <component
             :is="asyncResult.errorComponent"
             :error="asyncResult.error"
-            :retry="asyncResult.retry"
+            :retry="handleRetry"
           />
         </template>
         <template v-else-if="currentState === 'loading'">

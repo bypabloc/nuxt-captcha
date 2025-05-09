@@ -159,9 +159,11 @@ export function useAsyncComponent(
   const retry = (): void => {
     if (hasError.value) {
       $logger.info(`Reintentando cargar: ${path}`)
+      console.log(`Reintentando cargar el componente: ${path}`)
       error.value = null
       retryCallback.value()
     } else {
+      console.warn(`No hay error para reintentar`)
       $logger.warn(`No hay error para reintentar`)
     }
   }

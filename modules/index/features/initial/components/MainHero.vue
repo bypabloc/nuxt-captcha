@@ -43,7 +43,7 @@ const handleCountdownComplete = (): void => {
         <div class="text-center max-w-md px-4">
           <div class="flex flex-col md:items-center justify-center gap-4">
             <VKAsyncComponent
-              path="offers/features/pre-enrollment/components/PreEnrollment"
+              path="index/features/pre-enrollment/components/PreEnrollment"
             />
           </div>
         </div>

@@ -122,9 +122,9 @@ onMounted(() => {
           {{ t('subscription.form.actions.subscribe') }}
         </VKButton>
 
-        <VKCaptcha
+        <!--
+        VKCaptcha
           theme="light"
-          instance-id="pre-enrollment"
           :error-text="errorTextForCaptcha"
           container-class="w-full flex justify-center"
           @success="handleCaptchaSuccess"
@@ -133,7 +133,8 @@ onMounted(() => {
           @mounted="() => {
             // TODO: evento para cuando fue cargado el componente de captcha
           }"
-        />
+        -->
+
         <VKAlert
           v-if="showMessage"
           :type="messageType"

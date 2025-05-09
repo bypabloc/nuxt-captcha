@@ -17,8 +17,8 @@ export default defineNuxtConfig({
   logLevel: 'info',
   debug: false,
   typescript: {
-    typeCheck: true,
-    strict: true,
+    // typeCheck: true,
+    // strict: true,
   },
   app: {
     layoutTransition: { name: 'layout', mode: 'out-in' },

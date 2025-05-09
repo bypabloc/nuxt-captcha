@@ -35,7 +35,7 @@ $logger.info('WantToBeSponsor component loaded')
         {{ t('landing.preLaunch.wantToBeSponsor.description') }}
       </VKText>
       <VKAsyncComponent
-        path="offers/features/partner-enrollment/components/PartnerEnrollment"
+        path="index/features/partner-enrollment/components/PartnerEnrollment"
       />
       <VKText
         tag="p"
