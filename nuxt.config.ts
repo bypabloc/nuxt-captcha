@@ -32,7 +32,11 @@ export default defineNuxtConfig({
         { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' },
 
         // Etiquetas hreflang para idiomas o regiones alternas
-        { rel: 'alternate', hreflang: 'es-CL', href: 'https://the-full-stack.com/' },
+        {
+          rel: 'alternate',
+          hreflang: 'es-CL',
+          href: 'https://the-full-stack.com/',
+        },
         // Si se lanzan versiones en otros idiomas, agregarlos aquí
         // Ejemplo: { rel: 'alternate', hreflang: 'en-US', href: 'https://the-full-stack.com/en' },
       ],
@@ -60,8 +64,8 @@ export default defineNuxtConfig({
     asyncEntry: true,
   },
   components: [
-    // ~/components/ui/Button/Index.vue => <UIButton />
-    { path: '~/components/ui', extensions: ['.vue'], prefix: 'UI' },
+    // ~/components/vk/Button/Index.vue => <VKButton />
+    { path: '~/components/vk', extensions: ['.vue'], prefix: 'VK' },
   ],
   imports: {
     // https://nuxt.com/docs/guide/directory-structure/composables#how-files-are-scanned

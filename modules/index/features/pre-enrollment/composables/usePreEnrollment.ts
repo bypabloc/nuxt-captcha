@@ -1,5 +1,5 @@
-import { offersApi } from '@/modules/offers/api/offers.api'
-import { usePreEnrollmentStore } from '@/modules/offers/store/usePreEnrollmentStore'
+import { testsApi } from '@/modules/index/api/test.api'
+import { usePreEnrollmentStore } from '@/modules/index/store/usePreEnrollmentStore'
 
 interface PreEnrollmentActions {
   preEnroll(email: string): Promise<void>
@@ -8,13 +8,14 @@ interface PreEnrollmentActions {
 /**
  * Acciones para la preinscripción a ofertas.
  *
- * @author Eugenio Canales
+ * @author Pablo Contreras
  * @since 2025-04-30
  */
 export const usePreEnrollment = (): PreEnrollmentActions => {
   const $logger = useNuxtApp().$logger
   const preEnrollmentStore = usePreEnrollmentStore()
-  const captcha = useCaptchaHandler()
+
+  // TODO: import composable for captcha handling
 
   /**
    * Proceso de preinscripción a ofertas (para landing pre-evento).
@@ -22,14 +23,14 @@ export const usePreEnrollment = (): PreEnrollmentActions => {
    * @returns {Promise<void>} - Se resuelve cuando se obtiene la preinscripción
    * y se actualiza el store
    *
-   * @author Eugenio Canales
+   * @author Pablo Contreras
    * @since 2025-04-30
    */
   const preEnroll = async (email: string): Promise<void> => {
     try {
-      const captchaToken = captcha.token.value
+      const captchaToken = '' // TODO: add captcha value
       preEnrollmentStore.startSubmitting()
-      const response = await offersApi.subscribeOffers(
+      const response = await testsApi.subscribeTests(
         {
           source: 'landing',
           email,
@@ -41,13 +42,13 @@ export const usePreEnrollment = (): PreEnrollmentActions => {
       preEnrollmentStore.finishSubmitting(response.status, response.statusCode)
 
       if (!response.status) {
-        await captcha.resetCaptcha()
-        captcha.setVerifying(false)
+        // TODO: add captcha reset
+        // TODO: add captcha setVerifying
       }
     } catch (error) {
       $logger.error('pre enrollment error', error)
-      await captcha.resetCaptcha()
-      captcha.setVerifying(false)
+      // TODO: add captcha reset
+      // TODO: add captcha setVerifying
     }
   }
 

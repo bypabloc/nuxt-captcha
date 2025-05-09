@@ -15,6 +15,10 @@ import { usePartnerEnrollmentStore } from '@/modules/index/store/usePartnerEnrol
 import { toTypedSchema } from '@vee-validate/zod'
 import { z } from 'zod'
 
+defineOptions({
+  name: 'ModulesIndexFeaturesPartnerEnrollment',
+})
+
 const { t }: I18n = useI18n()
 const partnerEnrollmentStore = usePartnerEnrollmentStore()
 const partnerEnrollmentActions = usePartnerEnrollment()

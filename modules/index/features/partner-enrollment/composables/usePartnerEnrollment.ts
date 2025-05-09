@@ -1,5 +1,5 @@
-import { offersApi } from '@/modules/offers/api/offers.api'
-import { usePartnerEnrollmentStore } from '@/modules/offers/store/usePartnerEnrollmentStore'
+import { testsApi } from '@/modules/index/api/test.api'
+import { usePartnerEnrollmentStore } from '@/modules/index/store/usePartnerEnrollmentStore'
 
 interface PartnerEnrollmentActions {
   enrollAsPartner(email: string): Promise<void>
@@ -8,13 +8,14 @@ interface PartnerEnrollmentActions {
 /**
  * Acciones para inscripción como partner
  *
- * @author Eugenio Canales
+ * @author Pablo Contreras
  * @since 2025-05-06
  */
 export const usePartnerEnrollment = (): PartnerEnrollmentActions => {
   const $logger = useNuxtApp().$logger
   const partnerEnrollmentStore = usePartnerEnrollmentStore()
-  const captcha = useCaptchaHandler()
+
+  // TODO: import composable for captcha handling
 
   /**
    * Proceso de inscripción como partner.
@@ -22,14 +23,14 @@ export const usePartnerEnrollment = (): PartnerEnrollmentActions => {
    * @returns {Promise<void>} - Se resuelve cuando se obtiene la inscripción
    * y se actualiza el store
    *
-   * @author Eugenio Canales
+   * @author Pablo Contreras
    * @since 2025-05-06
    */
   const enrollAsPartner = async (email: string): Promise<void> => {
     try {
-      const captchaToken = captcha.token.value
+      const captchaToken = '' // TODO: add captcha value
       partnerEnrollmentStore.startSubmitting()
-      const response = await offersApi.subscribeOffers(
+      const response = await testsApi.subscribeTests(
         {
           source: 'landing',
           email,
@@ -44,13 +45,13 @@ export const usePartnerEnrollment = (): PartnerEnrollmentActions => {
       )
 
       if (!response.status) {
-        await captcha.resetCaptcha()
-        captcha.setVerifying(false)
+        // TODO: add captcha reset
+        // TODO: add captcha setVerifying
       }
     } catch (error) {
       $logger.error('partner enrollment error', error)
-      await captcha.resetCaptcha()
-      captcha.setVerifying(false)
+      // TODO: add captcha reset
+      // TODO: add captcha setVerifying
     }
   }
 

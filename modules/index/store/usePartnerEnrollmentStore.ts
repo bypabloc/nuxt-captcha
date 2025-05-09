@@ -7,7 +7,7 @@ const RESPONSE_CODES: Record<number, string> = {
 /**
  * Store para la inscripción como partner.
  *
- * @author Eugenio Canales
+ * @author Pablo Contreras
  * @since 2025-05-06
  */
 export const usePartnerEnrollmentStore = defineStore(

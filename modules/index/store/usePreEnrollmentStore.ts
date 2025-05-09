@@ -7,7 +7,7 @@ const RESPONSE_CODES: Record<number, string> = {
 /**
  * Store para la preinscripción a ofertas.
  *
- * @author Eugenio Canales
+ * @author Pablo Contreras
  * @since 2025-04-30
  */
 export const usePreEnrollmentStore = defineStore('preEnrollment', () => {

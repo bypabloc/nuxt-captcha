@@ -1,17 +1,21 @@
 <script setup lang="ts">
 /**
- * @component IndexPage
- * @description Página de inicio temporal que muestra un diseño estático.
+ * @component PagesIndex
+ * @description Página de inicio.
  *
  * @author Pablo Contreras
  * @since 2025/04/30
  */
 
+defineOptions({
+  name: 'PagesIndex',
+})
+
 const $config = useNuxtApp().$config
 const $loading = useNuxtApp().$loading
 const $logger = useNuxtApp().$logger
 
-$logger.debug('IndexPage', 'index.vue', 'Cargando página de inicio temporal', $config)
+$logger.debug('IndexPage', 'index.vue', 'Cargando página de inicio', $config)
 
 interface Step {
   name: string
@@ -20,22 +24,17 @@ interface Step {
 }
 
 const steps: Record<string, Step> = {
-  'coming-soon': {
-    name: 'ComingSoon',
-    description: 'Página próximamente',
-    path: 'root/features/coming-soon/components/Index',
-  },
-  'pre-launch': {
-    name: 'PreLaunch',
-    description: 'Página previa al lanzamiento',
-    path: 'root/features/pre-launch/components/Index',
+  'initial': {
+    name: 'Initial',
+    description: 'Pantalla de carga inicial',
+    path: 'index/features/initial/components/Index',
   },
 }
 
 const currentStepLanding = computed(() => {
   const currentStepLanding = $config.public.currentStepLanding as string
   if (!currentStepLanding) {
-    return 'coming-soon'
+    return 'initial'
   }
   return currentStepLanding
 })

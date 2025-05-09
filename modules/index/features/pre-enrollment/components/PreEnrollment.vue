@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * @component SubscriptionForm
- * @description Formulario para suscribirse al servicio de notificaciones de Chile Al Día
+ * @description Formulario para suscribirse al servicio de notificaciones
  * utilizando el correo electrónico con validación y captcha.
  *
  * @author Pablo Contreras
@@ -13,6 +13,10 @@ import { usePreEnrollment } from '@/modules/index/features/pre-enrollment/compos
 import { usePreEnrollmentStore } from '@/modules/index/store/usePreEnrollmentStore'
 import { toTypedSchema } from '@vee-validate/zod'
 import { z } from 'zod'
+
+defineOptions({
+  name: 'ModulesIndexFeaturesPreEnrollment',
+})
 
 const { t }: I18n = useI18n()
 const preEnrollmentStore = usePreEnrollmentStore()

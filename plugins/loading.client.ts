@@ -30,18 +30,20 @@ export default defineNuxtPlugin({
           /**
            * Muestra el overlay de carga con opciones de configuración
            * @param message - Mensaje opcional para mostrar durante la carga
-           * @param withLogo - Si debe mostrar el logo DF (predeterminado: true)
+           * @param withLogo - Si debe mostrar el logo VK (predeterminado: true)
            * @param color - Color del componente de carga (del sistema de diseño)
            */
           show: (
-            message?: string, 
+            message?: string,
             withLogo: boolean = true,
-            color?: ColorName
+            color?: ColorName,
           ): void => {
-            $logger.info(`Plugin loading: mostrando overlay${message ? ` con mensaje: ${message}` : ''}`)
+            $logger.info(
+              `Plugin loading: mostrando overlay${message ? ` con mensaje: ${message}` : ''}`,
+            )
             loadingStore.show(message, withLogo, color)
           },
-          
+
           /**
            * Oculta el overlay de carga
            */
@@ -49,7 +51,7 @@ export default defineNuxtPlugin({
             $logger.info('Plugin loading: ocultando overlay')
             loadingStore.hide()
           },
-          
+
           /**
            * Establece un nuevo mensaje en el overlay de carga
            * @param message - Mensaje a mostrar
@@ -58,7 +60,7 @@ export default defineNuxtPlugin({
             $logger.info(`Plugin loading: estableciendo mensaje: ${message}`)
             loadingStore.setMessage(message)
           },
-          
+
           /**
            * Configura las opciones visuales del overlay
            * @param withLogo - Si debe mostrar el logo
@@ -67,7 +69,7 @@ export default defineNuxtPlugin({
           setOptions: (withLogo?: boolean, color?: ColorName): void => {
             $logger.info('Plugin loading: actualizando opciones visuales')
             loadingStore.setOptions(withLogo, color)
-          }
+          },
         },
       },
     }
