@@ -1,0 +1,112 @@
+{
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit",
+    "source.organizeImports": "explicit"
+  },
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+
+  "typescript.tsdk": "node_modules/typescript/lib",
+
+  "eslint.format.enable": true,
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact",
+    "typescript",
+    "typescriptreact",
+    "vue"
+  ],
+
+  "prettier.requireConfig": true,
+
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[vue]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[jsonc]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "faststruct.config": {
+    "debug": true,
+    "exclude": {
+      "folders": [
+        ".coverage",
+        "__pycache__",
+        "node_modules",
+        ".output",
+        ".git",
+        "dist",
+        "public",
+        "build",
+        ".tmp",
+        "out",
+        ".env",
+        ".serverless",
+        ".nuxt",
+        "rules"
+      ],
+      "files": [
+        "pnpm-lock.yaml",
+        "*.log",
+        "*.svg",
+        "*.lock",
+        "package-lock.json",
+        ".eslintcache",
+        "*.spec.ts"
+      ],
+      "advanced": {
+        "patterns": ["**/*.min.js", "**/*.generated.*"],
+        "specificFiles": ["src/config/sensitive.json"],
+        "specificFolders": ["src/utils/", "tests/fixtures/"],
+        "regexPatterns": ["src/.*\\.md$", "docs/.*\\.temp\\.*"]
+      }
+    },
+    "excludeContent": {
+      "files": ["*.env", "*.svg"],
+      "folders": [],
+      "patterns": [
+        "*.vsix",
+        "**/*.secret.*",
+        "**/.secrets**",
+        "**/*/.env**",
+        "**/*/.svg**",
+        "**/*/.svg",
+        ".*env/",
+        "*.spec.ts"
+      ]
+    }
+  },
+  "editor.formatOnSaveMode": "modifications",
+  "cSpell.words": [
+    "attributify",
+    "Attributify",
+    "clig",
+    "debtflow",
+    "desestructuración",
+    "encapsulación",
+    "esbenp",
+    "iconify",
+    "Iconify",
+    "linkedin",
+    "Murecho",
+    "Nuxt",
+    "preflights",
+    "Resetea",
+    "reutilizable",
+    "transbank",
+    "Transbank",
+    "ubicable",
+    "unhead",
+    "unocss",
+    "vueuse",
+    "youtube"
+  ]
+}

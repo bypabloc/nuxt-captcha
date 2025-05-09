@@ -1,0 +1,19 @@
+{
+  "components_vk": {
+    "captcha": {
+      "title": "Captcha",
+      "description": "Captcha es un componente que ayuda a prevenir el spam y el abuso en formularios y otras interacciones en línea. Proporciona una verificación de usuario para garantizar que la acción sea realizada por un humano y no por un bot automatizado.",
+      "errors": {
+        "siteKey": {
+          "description": "La clave del sitio proporcionada por el servicio de captcha."
+        },
+        "theme": {
+          "description": "El tema del captcha, puede ser 'light' o 'dark'."
+        },
+        "size": {
+          "description": "El tamaño del captcha, puede ser 'normal' o 'compact'."
+        }
+      }
+    }
+  }
+}
