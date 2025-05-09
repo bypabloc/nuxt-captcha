@@ -18,9 +18,13 @@ defineOptions({
   name: 'ModulesIndexFeaturesPreEnrollment',
 })
 
+const $logger = useNuxtApp().$logger
 const { t }: I18n = useI18n()
 const preEnrollmentStore = usePreEnrollmentStore()
 const preEnrollmentActions = usePreEnrollment()
+const captchaHandler = useCaptchaHandler()
+
+
 
 const isSubmitting = ref(false)
 
@@ -48,8 +52,15 @@ const handleSubmit = async (values: Record<string, unknown>): Promise<void> => {
     const email = values.email as string
     isSubmitting.value = true
 
-    // Llamar a la función de pre-inscripción
-    await preEnrollmentActions.preEnroll(email)
+    // Verificar si el captcha está verificado
+    if (!captchaHandler.isVerified('pre-enrollment')) {
+      $logger.warn('Captcha no verificado')
+      isSubmitting.value = false
+      return
+    }
+
+    // Llamar a la función de pre-inscripción con el instanceId del captcha
+    await preEnrollmentActions.preEnroll(email, 'pre-enrollment')
 
     if (preEnrollmentStore.hasError) {
       isSubmitting.value = false
@@ -72,21 +83,32 @@ const messageType = computed((): 'success' | 'error' | 'info' => {
   return preEnrollmentStore.hasError ? 'error' : 'success'
 })
 
-const errorTextForCaptcha = computed(() => '')
+const isFormSubmitted = inject<Ref<boolean>>('isFormSubmitted', ref(false))
+
+const errorTextForCaptcha = computed(() => {
+  if (isFormSubmitted.value && !captchaHandler.isVerified('pre-enrollment')) {
+    return 'Por favor, complete el captcha'
+  }
+  return ''
+})
 
 const handleCaptchaError = (error: Error): void => {
+  $logger.error('Error en el captcha:', error)
 }
 
 const handleCaptchaSuccess = (token: string): void => {
+  $logger.info('Captcha completado con éxito:', token)
 }
 
 const handleCaptchaExpired = (): void => {
+  $logger.warn('El captcha ha expirado, por favor complételo nuevamente')
 }
 
 onMounted(() => {
   isSubmitting.value = false
   preEnrollmentStore.reset()
-  // TODO: limpia el captcha
+  // Inicializar el captcha
+  captchaHandler.ensureInitialized()
 })
 </script>
 
@@ -116,24 +138,22 @@ onMounted(() => {
           class="w-full"
           :is-loading="preEnrollmentStore.isLoading"
           :disabled="
-            preEnrollmentStore.isLoading // TODO: agregar deshabilitar el botón si el captcha no está completado
+            preEnrollmentStore.isLoading || !captchaHandler.isVerified('pre-enrollment')
           "
         >
           {{ t('subscription.form.actions.subscribe') }}
         </VKButton>
 
-        <!--
-        VKCaptcha
+        <VKCaptcha
           theme="light"
           :error-text="errorTextForCaptcha"
+          instance-id="pre-enrollment"
           container-class="w-full flex justify-center"
           @success="handleCaptchaSuccess"
           @expired="handleCaptchaExpired"
           @error="handleCaptchaError"
-          @mounted="() => {
-            // TODO: evento para cuando fue cargado el componente de captcha
-          }"
-        -->
+          @mounted="() => { $logger.info('Captcha montado correctamente') }"
+        />
 
         <VKAlert
           v-if="showMessage"

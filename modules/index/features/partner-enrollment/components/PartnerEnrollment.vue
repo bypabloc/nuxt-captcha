@@ -19,9 +19,11 @@ defineOptions({
   name: 'ModulesIndexFeaturesPartnerEnrollment',
 })
 
+const $logger = useNuxtApp().$logger
 const { t }: I18n = useI18n()
 const partnerEnrollmentStore = usePartnerEnrollmentStore()
 const partnerEnrollmentActions = usePartnerEnrollment()
+const captchaHandler = useCaptchaHandler()
 
 const isSubmitting = ref(false)
 
@@ -49,8 +51,15 @@ const handleSubmit = async (values: Record<string, unknown>): Promise<void> => {
     const email = values.email as string
     isSubmitting.value = true
 
-    // Llamar a la función de inscripción como partner
-    await partnerEnrollmentActions.enrollAsPartner(email)
+    // Verificar si el captcha está verificado
+    if (!captchaHandler.isVerified('partner-enrollment')) {
+      $logger.warn('Captcha no verificado')
+      isSubmitting.value = false
+      return
+    }
+
+    // Llamar a la función de inscripción como partner con el instanceId del captcha
+    await partnerEnrollmentActions.enrollAsPartner(email, 'partner-enrollment')
 
     if (partnerEnrollmentStore.hasError) {
       isSubmitting.value = false
@@ -64,6 +73,8 @@ const handleSubmit = async (values: Record<string, unknown>): Promise<void> => {
   }
 }
 
+const isFormSubmitted = inject<Ref<boolean>>('isFormSubmitted', ref(false))
+
 const showMessage = computed(
   () => !partnerEnrollmentStore.isLoading && partnerEnrollmentStore.statusCode
 )
@@ -73,29 +84,38 @@ const messageType = computed((): 'success' | 'error' | 'info' => {
   return partnerEnrollmentStore.hasError ? 'error' : 'success'
 })
 
-const errorTextForCaptcha = computed(() => '')
+const errorTextForCaptcha = computed(() => {
+  if (isFormSubmitted.value && !captchaHandler.isVerified('partner-enrollment')) {
+    return 'Por favor, complete el captcha'
+  }
+  return ''
+})
 
 const handleCaptchaError = (error: Error): void => {
+  $logger.error('Error en el captcha:', error)
 }
 
 const handleCaptchaSuccess = (token: string): void => {
+  $logger.info('Captcha completado con éxito:', token)
 }
 
 const handleCaptchaExpired = (): void => {
+  $logger.warn('El captcha ha expirado, por favor complételo nuevamente')
 }
 
 const isFormDisabled = computed(() => {
   return isSubmitting.value || 
          partnerEnrollmentStore.isLoading
-         // TODO: Agregar lógica para deshabilitar el formulario si el captcha no es válido
 })
 
 onMounted(() => {
   isSubmitting.value = false
   partnerEnrollmentStore.reset && partnerEnrollmentStore.reset()
-  // TODO: limpia el captcha
+  // Inicializar el captcha
+  captchaHandler.ensureInitialized()
 })
 </script>
+
 
 <template>
   <div class="w-full max-w-md mx-auto">
@@ -118,7 +138,7 @@ onMounted(() => {
             type="submit" 
             size="small"
             width="fixed"
-            :disabled="isFormDisabled"
+            :disabled="isFormDisabled || !captchaHandler.isVerified('partner-enrollment')"
           >
             <VKIcon 
               icon="arrow-right" 
@@ -130,19 +150,16 @@ onMounted(() => {
       </VKFieldInput>
 
       <div class="flex flex-col items-center gap-4 mt-4">
-
-        <!--
-        VKCaptcha
+        <VKCaptcha
           theme="light"
           :error-text="errorTextForCaptcha"
+          instance-id="partner-enrollment"
           container-class="w-full flex justify-center"
           @success="handleCaptchaSuccess"
           @expired="handleCaptchaExpired"
           @error="handleCaptchaError"
-          @mounted="() => {
-            // TODO: evento para cuando fue cargado el componente de captcha
-          }"
-        -->
+          @mounted="() => { $logger.info('Captcha montado correctamente') }"
+        />
 
         <VKAlert
           v-if="showMessage"
@@ -163,7 +180,3 @@ onMounted(() => {
     </VKAlert>
   </div>
 </template>
-
-<style scoped>
-/* Estilos adicionales específicos para este componente si es necesario */
-</style>

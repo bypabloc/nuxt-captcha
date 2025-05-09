@@ -1,8 +1,10 @@
+// modules/index/features/partner-enrollment/composables/usePartnerEnrollment.ts
 import { testsApi } from '@/modules/index/api/test.api'
 import { usePartnerEnrollmentStore } from '@/modules/index/store/usePartnerEnrollmentStore'
+import { useCaptchaStore } from '@/store/useCaptchaStore'
 
 interface PartnerEnrollmentActions {
-  enrollAsPartner(email: string): Promise<void>
+  enrollAsPartner(email: string, instanceId: string): Promise<void>
 }
 
 /**
@@ -10,25 +12,39 @@ interface PartnerEnrollmentActions {
  *
  * @author Pablo Contreras
  * @since 2025-05-06
+ * @updated 2025-05-09
  */
 export const usePartnerEnrollment = (): PartnerEnrollmentActions => {
   const $logger = useNuxtApp().$logger
   const partnerEnrollmentStore = usePartnerEnrollmentStore()
-
-  // TODO: import composable for captcha handling
+  const captchaStore = useCaptchaStore()
 
   /**
    * Proceso de inscripción como partner.
    *
+   * @param {string} email - Email para la inscripción
+   * @param {string} instanceId - ID de la instancia del captcha para obtener el token
    * @returns {Promise<void>} - Se resuelve cuando se obtiene la inscripción
    * y se actualiza el store
    *
    * @author Pablo Contreras
    * @since 2025-05-06
+   * @updated 2025-05-09
    */
-  const enrollAsPartner = async (email: string): Promise<void> => {
+  const enrollAsPartner = async (
+    email: string,
+    instanceId: string,
+  ): Promise<void> => {
     try {
-      const captchaToken = '' // TODO: add captcha value
+      // Obtener el token del captcha usando el instanceId
+      const captchaToken = captchaStore.getToken(instanceId)
+
+      if (!captchaToken) {
+        $logger.error('Token de captcha no disponible para', instanceId)
+        partnerEnrollmentStore.finishSubmitting(false, 422)
+        return
+      }
+
       partnerEnrollmentStore.startSubmitting()
       const response = await testsApi.subscribeTests(
         {
@@ -45,13 +61,28 @@ export const usePartnerEnrollment = (): PartnerEnrollmentActions => {
       )
 
       if (!response.status) {
-        // TODO: add captcha reset
-        // TODO: add captcha setVerifying
+        // Reiniciar el captcha si la respuesta no fue exitosa
+        try {
+          const captchaHandler = useCaptchaHandler()
+          captchaHandler.reset(instanceId)
+          captchaHandler.setVerifying(false)
+        } catch (error) {
+          $logger.error('Error al reiniciar el captcha:', error)
+        }
       }
     } catch (error) {
       $logger.error('partner enrollment error', error)
-      // TODO: add captcha reset
-      // TODO: add captcha setVerifying
+
+      // Reiniciar el captcha en caso de error
+      try {
+        const captchaHandler = useCaptchaHandler()
+        captchaHandler.reset(instanceId)
+        captchaHandler.setVerifying(false)
+      } catch (captchaError) {
+        $logger.error('Error al reiniciar el captcha:', captchaError)
+      }
+
+      partnerEnrollmentStore.finishSubmitting(false, 500)
     }
   }
 

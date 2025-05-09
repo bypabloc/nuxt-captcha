@@ -1,0 +1,237 @@
+// composables/useCaptchaHandler.ts
+import { useCaptchaStore } from '~/store/useCaptchaStore'
+
+interface CaptchaHandlerOptions {
+  siteKey?: string
+}
+
+interface CaptchaHandlerActions {
+  /**
+   * Verifica si Turnstile está inicializado
+   */
+  isInitialized: ComputedRef<boolean>
+  
+  /**
+   * Verifica si un captcha específico está verificado
+   * @param instanceId ID de la instancia del captcha
+   */
+  isVerified: (instanceId: string) => boolean
+  
+  /**
+   * Obtiene el token de un captcha específico
+   * @param instanceId ID de la instancia del captcha
+   */
+  getToken: (instanceId: string) => string | null
+  
+  /**
+   * Reinicia un captcha específico
+   * @param instanceId ID de la instancia del captcha
+   */
+  reset: (instanceId: string) => void
+  
+  /**
+   * Establece el estado de verificación
+   * @param isVerifying Estado de verificación
+   */
+  setVerifying: (isVerifying: boolean) => void
+  
+  /**
+   * Establece un error para el captcha
+   * @param error Error a establecer
+   */
+  setError: (error: Error | null) => void
+  
+  /**
+   * Inicializa Turnstile si aún no está inicializado
+   */
+  ensureInitialized: () => Promise<boolean>
+}
+
+/**
+ * Composable para manejar captchas Turnstile de Cloudflare.
+ * Proporciona métodos para interactuar con el captcha y obtener tokens.
+ *
+ * @param options Opciones de configuración
+ * @returns Acciones para manejar el captcha
+ * 
+ * @author Pablo Contreras
+ * @since 2025/05/09
+ */
+export const useCaptchaHandler = (options: CaptchaHandlerOptions = {}): CaptchaHandlerActions => {
+  const captchaStore = useCaptchaStore()
+  const $logger = useNuxtApp().$logger
+  const runtimeConfig = useRuntimeConfig()
+  
+  // Obtener la clave del sitio de las opciones o de la configuración
+  const siteKey = options.siteKey || runtimeConfig.public.turnstileSiteKey
+
+  $logger.info(`Usando clave de sitio Turnstile: ${siteKey || 'NO CONFIGURADA'}`)
+  
+  // Objeto donde guardaremos datos de widgets Turnstile
+  const turnstileWidgets = ref<Record<string, { widgetId?: string }>>({})
+  
+  /**
+   * Verifica si window.turnstile existe
+   */
+  const isTurnstileLoaded = computed((): boolean => {
+    return typeof window !== 'undefined' && 'turnstile' in window
+  })
+  
+  /**
+   * Carga el script de Turnstile si aún no está cargado
+   */
+  const loadTurnstileScript = (): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      if (isTurnstileLoaded.value) {
+        $logger.info('Turnstile ya está cargado, omitiendo carga de script')
+        resolve()
+        return
+      }
+      
+      try {
+        $logger.info('Intentando cargar el script de Turnstile')
+        
+        // Definir callback cuando el script se cargue
+        window.onloadTurnstileCb = () => {
+          $logger.info('Turnstile API cargada correctamente')
+          captchaStore.setInitialized(true)
+          resolve()
+        }
+        
+        const script = document.createElement('script')
+        script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=onloadTurnstileCb'
+        script.async = true
+        script.defer = true
+        
+        script.onerror = (error) => {
+          $logger.error('Error al cargar el script de Turnstile:', error)
+          reject(new Error('Error al cargar el script de Turnstile'))
+        }
+        
+        document.head.appendChild(script)
+        $logger.info('Script de Turnstile añadido al DOM')
+      } catch (error) {
+        $logger.error('Error cargando el script de Turnstile:', error)
+        reject(error)
+      }
+    })
+  }
+  
+  /**
+   * Asegura que Turnstile esté inicializado
+   */
+  const ensureInitialized = async (): Promise<boolean> => {
+    if (captchaStore.isInitialized) {
+      return true
+    }
+    
+    try {
+      await loadTurnstileScript()
+      return true
+    } catch (error) {
+      $logger.error('Error al inicializar Turnstile:', error)
+      captchaStore.setError(error instanceof Error ? error : new Error(String(error)))
+      return false
+    }
+  }
+  
+  /**
+   * Reinicia un captcha específico
+   */
+  const reset = (instanceId: string): void => {
+    if (!isTurnstileLoaded.value) {
+      $logger.warn('Turnstile no está cargado, no se puede reiniciar')
+      return
+    }
+    
+    try {
+      const widgetId = turnstileWidgets.value[instanceId]?.widgetId
+      
+      if (widgetId) {
+        window.turnstile.reset(widgetId)
+        captchaStore.clearToken(instanceId)
+        $logger.info(`Captcha reiniciado: ${instanceId}`)
+      } else {
+        $logger.warn(`No se encontró widgetId para el instanceId: ${instanceId}`)
+      }
+    } catch (error) {
+      $logger.error(`Error al reiniciar el captcha ${instanceId}:`, error)
+    }
+  }
+  
+  /**
+   * Renderiza un widget de Turnstile
+   */
+  const renderWidget = (
+    container: HTMLElement, 
+    instanceId: string, 
+    onSuccess: (token: string) => void,
+    onError: (error: Error) => void,
+    onExpired: () => void
+  ): string | undefined => {
+    if (!isTurnstileLoaded.value) {
+      $logger.warn('Turnstile no está cargado, no se puede renderizar el widget')
+      return undefined
+    }
+    
+    try {
+      // Configuración para el widget
+      const widgetParams = {
+        sitekey: siteKey,
+        callback: (token: string) => {
+          captchaStore.setToken(instanceId, token)
+          onSuccess(token)
+        },
+        'expired-callback': () => {
+          captchaStore.clearToken(instanceId)
+          onExpired()
+        },
+        'error-callback': (error: any) => {
+          const errorObj = error instanceof Error ? error : new Error(String(error))
+          captchaStore.setError(errorObj)
+          onError(errorObj)
+        },
+        theme: 'light'
+      }
+      
+      // Renderizar el widget
+      const widgetId = window.turnstile.render(container, widgetParams)
+      turnstileWidgets.value[instanceId] = { widgetId }
+      
+      $logger.info(`Widget Turnstile renderizado: ${instanceId} (ID: ${widgetId})`)
+      return widgetId
+    } catch (error) {
+      $logger.error(`Error al renderizar widget para ${instanceId}:`, error)
+      return undefined
+    }
+  }
+  
+  // Guardar referencia a renderWidget para usar desde el componente
+  provide('renderTurnstileWidget', renderWidget)
+  
+  return {
+    isInitialized: computed(() => captchaStore.isInitialized),
+    isVerified: captchaStore.isVerified,
+    getToken: captchaStore.getToken,
+    reset,
+    setVerifying: captchaStore.setVerifying,
+    setError: captchaStore.setError,
+    ensureInitialized
+  }
+}
+
+// Definición del tipo window.turnstile
+declare global {
+  interface Window {
+    turnstile: {
+      render: (
+        container: HTMLElement, 
+        params: Record<string, any>
+      ) => string
+      reset: (widgetId: string) => void
+      getResponse: (widgetId: string) => string | undefined
+      remove: (widgetId: string) => void
+    }
+    onloadTurnstileCb: () => void
+  }
+}
