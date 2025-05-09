@@ -41,10 +41,6 @@ const currentStepLanding = computed(() => {
 })
 
 const currentStepData: Step = steps[currentStepLanding.value]
-const logoutActions = useLogout()
-onMounted(() => {
-  logoutActions.logout({ shouldRedirect: false })
-})
 
 const handleLoadingStart = (): void => {
   $loading.show()

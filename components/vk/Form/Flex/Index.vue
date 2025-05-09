@@ -1,0 +1,409 @@
+<script setup lang="ts">
+/**
+ * @component VKFormFlex
+ * @description Componente de formulario con layout flexible usando exclusivamente flexbox.
+ * A diferencia de VKForm, este componente siempre usa flex (no grid) y permite configurar
+ * la dirección del flujo (row o column) mediante props.
+ *
+ * @props {Object} validationSchema - Schema de validación para el formulario
+ * @props {Object} initialValues - Valores iniciales para los campos
+ * @props {Boolean} validateOnMount - Si debe validarse al montar el componente
+ * @props {String} generalError - Mensaje de error general para todo el formulario
+ * @props {String} direction - Dirección del flex layout ('row' o 'column')
+ * @props {Boolean} wrap - Si los elementos deben ajustarse (wrap) cuando no caben en una línea/columna
+ * @props {String} gap - Espacio entre elementos del formulario ('xs', 'sm', 'md', 'lg', 'xl')
+ *
+ * @emits submit - Se emite cuando el formulario se envía con datos válidos
+ * @emits reset - Se emite cuando el formulario se reinicia
+ *
+ * @slots default - Contenido principal del formulario (campos)
+ * @slots error - Contenido personalizado para mostrar errores generales
+ * @slots title - Título del formulario
+ * @slots subtitle - Subtítulo del formulario
+ * @slots footer - Contenido del pie del formulario
+ *
+ * @example
+ * <VKFormFlex
+ *   :validation-schema="schema"
+ *   :initial-values="{ email: 'contacto@ejemplo.com' }"
+ *   direction="row"
+ *   wrap
+ *   gap="lg"
+ *   @submit="handleSubmit"
+ * >
+ *   <VKFieldInput name="nombre" required>
+ *     <template #label>Nombre</template>
+ *   </VKFieldInput>
+ *   <VKFieldInput name="apellido" required>
+ *     <template #label>Apellido</template>
+ *   </VKFieldInput>
+ *   <VKFieldInput name="email" type="email" required>
+ *     <template #label>Correo Electrónico</template>
+ *   </VKFieldInput>
+ * </VKFormFlex>
+ *
+ * @author Pablo Contreras
+ * @since 2025/05/08
+ */
+import { useForm } from 'vee-validate'
+
+defineOptions({
+  name: 'ComponentsVKFormFlex',
+})
+
+const display = useDisplay()
+
+const { isMobile }: { isMobile: ComputedRef<boolean> } = display
+
+// Definición de tipos específicos para las funciones
+// Usamos unknown en lugar de any para mantener seguridad de tipos
+type FormValues = Record<string, unknown>
+
+// Definición de tipos para la desestructuración
+type FormContextType = ReturnType<typeof useForm>
+
+const props = defineProps({
+  validationSchema: {
+    type: Object,
+    default: () => ({}),
+  },
+  initialValues: {
+    type: Object,
+    default: () => ({}),
+  },
+  validateOnMount: {
+    type: Boolean,
+    default: false,
+  },
+  generalError: {
+    type: String,
+    default: '',
+  },
+  direction: {
+    type: String,
+    default: 'column',
+    validator: (value: string) => ['row', 'column'].includes(value),
+  },
+  wrap: {
+    type: Boolean,
+    default: false,
+  },
+  gap: {
+    type: String,
+    default: 'md',
+    validator: (value: string) => ['xs', 'sm', 'md', 'lg', 'xl'].includes(value),
+  },
+})
+
+const slots = useSlots()
+const hasTitleSlot = computed(() => !!slots.title)
+const hasSubtitleSlot = computed(() => !!slots.subtitle)
+
+// Estado de envío del formulario - Ahora manejado internamente
+const isSubmitted = ref(false)
+
+const $logger = useNuxtApp().$logger
+$logger.info('VKFormFlex', 'Props:', props)
+$logger.info('VKFormFlex', 'Slots:', slots)
+
+const emit = defineEmits<{
+  submit: [values: FormValues]
+  reset: []
+}>()
+
+// Configuración del formulario con vee-validate
+// No anotamos el tipo explícitamente para permitir inferencia de tipos
+const formContext = useForm({
+  validationSchema: props.validationSchema,
+  initialValues: props.initialValues,
+  validateOnMount: props.validateOnMount,
+})
+
+// Extraemos las propiedades y métodos del context con anotación de tipo
+const {
+  handleSubmit,
+  handleReset,
+  resetForm,
+  submitForm,
+  values,
+  errors,
+  errorBag,
+  meta,
+  isSubmitting,
+  defineField,
+  setFieldError,
+  setErrors,
+  setValues,
+  setFieldValue,
+  validateField,
+  validate,
+}: FormContextType = formContext
+
+// Proporcionar el contexto del formulario a los componentes hijos
+provide('form', {
+  handleSubmit,
+  handleReset,
+  resetForm,
+  submitForm,
+  values,
+  errors,
+  errorBag,
+  meta,
+  isSubmitting,
+  defineField,
+  setFieldError,
+  setErrors,
+  setValues,
+  setFieldValue,
+  validateField,
+  validate,
+})
+
+// Proporcionar isSubmitted para que los componentes hijos puedan acceder directamente
+provide('isFormSubmitted', isSubmitted)
+
+// Computamos si el formulario es válido basado en meta
+const isValid = computed(() => meta.value.valid)
+
+// Mapeo de tamaños de espaciado a clases Tailwind
+const gapClasses = {
+  'xs': 'gap-2',
+  'sm': 'gap-3',
+  'md': 'gap-4',
+  'lg': 'gap-6',
+  'xl': 'gap-8',
+}
+
+// Calculamos las clases del contenedor de los campos del formulario según los props
+const formFieldsContainerClasses = computed(() => {
+  const classes = ['flex']
+  
+  // Dirección del flex
+  classes.push(props.direction === 'row' ? 'flex-row' : 'flex-col')
+  
+  // Wrap
+  if (props.wrap) {
+    classes.push('flex-wrap')
+  }
+  
+  // Gap
+  classes.push(gapClasses[props.gap as keyof typeof gapClasses] || 'gap-4')
+  
+  // Ancho máximo adaptado al contenido
+  classes.push('w-full')
+  
+  // Añadir clase personalizada para el componente
+  classes.push('vk-form-flex')
+  
+  return classes.join(' ')
+})
+
+/**
+ * Función para enfocar el primer campo inválido en el formulario
+ * Busca elementos con clases de error específicas y hace focus en el primero
+ */
+const focusFirstInvalidField = async (): Promise<void> => {
+  await nextTick()
+
+  // Los selectores para diferentes tipos de campos inválidos
+  const selectors = [
+    // Campos de entrada de texto, email, password, etc.
+    'input.vk-field-input__input--error',
+    // Checkbox con error
+    'input.vk-field-checkbox__input--error',
+    // Select con error
+    'select.vk-field-select__select--error',
+    // Textarea con error
+    'textarea.vk-field-textarea__input--error',
+  ]
+
+  // Buscar el primer elemento inválido
+  const invalidField = document.querySelector(selectors.join(', '))
+
+  if (invalidField && invalidField instanceof HTMLElement) {
+    // Hacer focus en el elemento inválido
+    invalidField.focus()
+    // Hacer scroll para mostrar el campo con error
+    invalidField.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    return
+  }
+
+  // Si no se encuentra el campo directamente, buscar el contenedor del campo
+  const containerSelectors = [
+    '.vk-field-input--error',
+    '.vk-field-checkbox--error',
+    '.vk-field-select--error',
+    '.vk-field-textarea--error',
+  ]
+
+  const invalidContainer = document.querySelector(containerSelectors.join(', '))
+
+  if (invalidContainer && invalidContainer instanceof HTMLElement) {
+    // Buscar el input dentro del contenedor
+    const inputElement = invalidContainer.querySelector(
+      'input, select, textarea',
+    )
+
+    if (inputElement && inputElement instanceof HTMLElement) {
+      inputElement.focus()
+      inputElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    } else {
+      // Si no se encuentra un elemento de entrada, al menos hacer scroll al contenedor
+      invalidContainer.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }
+}
+
+// Función que se ejecuta antes de que el formulario se envíe para validación
+const beforeSubmit = (): void => {
+  // Establecer isSubmitted a true antes de cualquier validación
+  isSubmitted.value = true
+}
+
+// Manejador de envío del formulario modificado con focus automático
+const onSubmit = (event: Event): void => {
+  // Marcar el formulario como enviado
+  beforeSubmit()
+
+  // Prevenir el comportamiento predeterminado del formulario
+  event.preventDefault()
+
+  // Usar el handleSubmit de vee-validate para validar y procesar el envío
+  handleSubmit((values: FormValues) => {
+    $logger.info('VKFormFlex', 'Formulario enviado con valores:', values)
+    emit('submit', values)
+  })(event)
+
+  // Verificar después de la validación si hay errores y enfocar el campo
+  nextTick(async () => {
+    if (!meta.value.valid) {
+      await focusFirstInvalidField()
+    }
+  })
+}
+
+// Manejador para el reset del formulario
+const onReset = (): void => {
+  // Resetear el estado de envío
+  isSubmitted.value = false
+  handleReset()
+  emit('reset')
+}
+
+// Proporcionar error general al contexto
+provide('generalError', toRef(props, 'generalError'))
+</script>
+
+<template>
+  <form
+    class="vk-form flex justify-center items-center w-full"
+    @submit="onSubmit"
+    @reset.prevent="onReset"
+  >
+    <div class="flex flex-col gap-6 w-full items-center">
+      <div
+        v-if="hasTitleSlot"
+        class="vk-form__header w-full"
+      >
+        <div
+          class="vk-form__header-content flex flex-col gap-2"
+          :class="{ 'justify-center items-center': !isMobile }"
+        >
+          <VKText
+            :style="'subtitle-1'"
+            variant="bold"
+            color="dark-green"
+          >
+            <slot name="title" />
+          </VKText>
+          <div v-if="hasSubtitleSlot">
+            <VKText tag="p">
+              <slot name="subtitle" />
+            </VKText>
+          </div>
+        </div>
+      </div>
+
+      <!-- Contenedor principal centrado -->
+      <div class="flex justify-center w-full">
+        <!-- Contenedor de campos con layout flexible -->
+        <div :class="formFieldsContainerClasses">
+          <slot
+            :values="values"
+            :errors="errors"
+            :meta="meta"
+            :is-submitting="isSubmitting"
+            :is-submitted="isSubmitted"
+            :is-valid="isValid"
+            :reset="onReset"
+            :submit="onSubmit"
+          />
+        </div>
+      </div>
+
+      <div class="flex flex-col justify-center items-center gap-6">
+        <slot
+          name="footer"
+          :values="values"
+          :errors="errors"
+          :meta="meta"
+          :is-submitting="isSubmitting"
+          :is-submitted="isSubmitted"
+          :is-valid="isValid"
+          :reset="onReset"
+          :submit="onSubmit"
+        />
+
+        <div
+          v-if="generalError"
+          class="vk-form__error"
+        >
+          <slot name="error">
+            <p class="vk-form__error-message">{{ generalError }}</p>
+          </slot>
+        </div>
+      </div>
+    </div>
+  </form>
+</template>
+
+<style scoped>
+.vk-form {
+  width: 100%;
+}
+
+.vk-form__error {
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  border-radius: 0.375rem;
+  background-color: rgba(220, 38, 38, 0.1);
+  border: 1px solid rgba(220, 38, 38, 0.2);
+}
+
+.vk-form__error-message {
+  color: rgb(220, 38, 38);
+  font-size: 0.875rem;
+}
+
+/* Estilos específicos para el layout flex */
+.vk-form-flex {
+  max-width: 4xl;
+}
+
+/* Ajustes para dirección row */
+.vk-form-flex.flex-row > * {
+  flex-basis: auto;
+  flex-grow: 0;
+  min-width: 200px;  /* Ancho mínimo para los campos en dirección row */
+}
+
+/* Ajustes para direction row con wrap */
+.vk-form-flex.flex-row.flex-wrap > * {
+  margin-bottom: 0.5rem;
+}
+
+/* Ancho completo para dirección column */
+.vk-form-flex.flex-col > * {
+  width: 100%;
+}
+</style>

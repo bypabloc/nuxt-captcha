@@ -10,6 +10,11 @@
 import type { Logger } from '@/plugins/logger'
 import type { PluginOptions } from 'nuxt/app'
 
+interface TimelineStep {
+  title: string
+  description: string
+}
+
 /**
  * Interfaz para los datos de prueba
  */
