@@ -106,6 +106,43 @@ const onTurnstileExpired = (): void => {
   emit('expired')
 }
 
+// Observar cambios en el estado verificado
+watch(() => captchaHandler.isVerified(props.instanceId), (isVerified) => {
+  if (!isVerified) {
+    $logger.info(`Detectado cambio en estado verificado para ${props.instanceId}, actualizando widget`)
+    // Si el captcha ya no está verificado, asegurarse de que el widget está listo para nueva verificación
+    nextTick(() => {
+      if (captchaContainerRef.value && renderTurnstileWidget) {
+        // Verificar si hay un widget existente en este contenedor
+        const existingWidgetId = captchaContainerRef.value.getAttribute('data-widget-id')
+        if (existingWidgetId && window.turnstile) {
+          try {
+            // Intentar eliminar el widget existente
+            window.turnstile.remove(existingWidgetId)
+            captchaContainerRef.value.removeAttribute('data-widget-id')
+          } catch (error) {
+            $logger.error(`Error al eliminar widget existente: ${error}`)
+          }
+        }
+        
+        // Re-renderizar un nuevo widget
+        const widgetId = renderTurnstileWidget(
+          captchaContainerRef.value,
+          props.instanceId,
+          onTurnstileSuccess,
+          onTurnstileError,
+          onTurnstileExpired
+        )
+        
+        if (widgetId) {
+          captchaContainerRef.value.setAttribute('data-widget-id', widgetId)
+          $logger.info(`Widget re-renderizado con ID: ${widgetId}`)
+        }
+      }
+    })
+  }
+})
+
 // Inicialización y montaje del captcha
 onMounted(async () => {
   $logger.info(`Montando componente captcha: ${props.instanceId}`)

@@ -187,45 +187,87 @@ export const useCaptchaHandler = (options: CaptchaHandlerOptions = {}): CaptchaH
     }
   }
   
-  /**
-   * Reinicia un captcha específico
-   */
-  const reset = (instanceId: string): void => {
-    if (!isTurnstileLoaded.value) {
-      $logger.warn('Turnstile no está cargado, no se puede reiniciar')
-      return
-    }
-    
-    try {
-      const widgetId = turnstileWidgets.value[instanceId]?.widgetId
-      
-      if (widgetId) {
-        window.turnstile.reset(widgetId)
-        captchaStore.clearToken(instanceId)
-        $logger.info(`Captcha reiniciado: ${instanceId}`)
-      } else {
-        $logger.warn(`No se encontró widgetId para el instanceId: ${instanceId}`)
-      }
-    } catch (error) {
-      $logger.error(`Error al reiniciar el captcha ${instanceId}:`, error)
-    }
+/**
+ * Reinicia un captcha específico y fuerza una nueva verificación
+ * @param instanceId - ID de la instancia del captcha a reiniciar
+ */
+const reset = (instanceId: string): void => {
+  if (!isTurnstileLoaded.value) {
+    $logger.warn('Turnstile no está cargado, no se puede reiniciar')
+    return
   }
   
+  try {
+    const widgetId = turnstileWidgets.value[instanceId]?.widgetId
+    
+    if (widgetId) {
+      // Limpia el token en el store
+      captchaStore.clearToken(instanceId)
+      captchaStore.setVerified(instanceId, false)
+      
+      // Primero intenta el método reset estándar
+      window.turnstile.reset(widgetId)
+      $logger.info(`Captcha reiniciado: ${instanceId}`)
+      
+      // Obtén el contenedor del widget
+      const container = document.querySelector(`[data-instance-id="${instanceId}"]`)
+      if (container) {
+        // Para forzar una nueva verificación, vamos a eliminar y volver a crear el widget
+        setTimeout(() => {
+          try {
+            // Elimina el widget actual
+            window.turnstile.remove(widgetId)
+            delete turnstileWidgets.value[instanceId]
+            
+            // Re-renderiza un nuevo widget
+            const newWidgetId = renderWidget(
+              container as HTMLElement,
+              instanceId,
+              (token) => {
+                captchaStore.setToken(instanceId, token)
+                $logger.info(`Nuevo token generado para ${instanceId}`)
+              },
+              (error) => {
+                captchaStore.setError(error)
+                $logger.error(`Error en nuevo widget para ${instanceId}:`, error)
+              },
+              () => {
+                captchaStore.clearToken(instanceId)
+                $logger.info(`Token expirado para nuevo widget ${instanceId}`)
+              }
+            )
+            
+            $logger.info(`Nuevo widget creado con ID: ${newWidgetId}`)
+          } catch (recreateError) {
+            $logger.error(`Error al recrear el widget para ${instanceId}:`, recreateError)
+          }
+        }, 100) // Pequeño retraso para asegurar que el reset se ha completado
+      }
+    } else {
+      $logger.warn(`No se encontró widgetId para el instanceId: ${instanceId}`)
+    }
+  } catch (error) {
+    $logger.error(`Error al reiniciar el captcha ${instanceId}:`, error)
+  }
+}
+
   /**
    * Renderiza un widget de Turnstile
    */
   const renderWidget = (
-    container: HTMLElement, 
-    instanceId: string, 
+    container: HTMLElement,
+    instanceId: string,
     onSuccess: (token: string) => void,
     onError: (error: Error) => void,
-    onExpired: () => void
+    onExpired: () => void,
   ): string | undefined => {
     if (!isTurnstileLoaded.value) {
-      $logger.warn('Turnstile no está cargado, no se puede renderizar el widget')
+      $logger.warn(
+        'Turnstile no está cargado, no se puede renderizar el widget',
+      )
       return undefined
     }
-    
+
     try {
       // Configuración para el widget
       const widgetParams = {
@@ -239,18 +281,23 @@ export const useCaptchaHandler = (options: CaptchaHandlerOptions = {}): CaptchaH
           onExpired()
         },
         'error-callback': (error: any) => {
-          const errorObj = error instanceof Error ? error : new Error(String(error))
+          const errorObj =
+            error instanceof Error ? error : new Error(String(error))
           captchaStore.setError(errorObj)
           onError(errorObj)
         },
-        theme: 'light'
+        theme: 'light',
       }
-      
+
       // Renderizar el widget
       const widgetId = window.turnstile.render(container, widgetParams)
       turnstileWidgets.value[instanceId] = { widgetId }
-      
-      $logger.info(`Widget Turnstile renderizado: ${instanceId} (ID: ${widgetId})`)
+
+      container.setAttribute('data-widget-id', widgetId)
+
+      $logger.info(
+        `Widget Turnstile renderizado: ${instanceId} (ID: ${widgetId})`,
+      )
       return widgetId
     } catch (error) {
       $logger.error(`Error al renderizar widget para ${instanceId}:`, error)

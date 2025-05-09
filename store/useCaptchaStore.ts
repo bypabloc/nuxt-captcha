@@ -33,7 +33,7 @@ export const useCaptchaStore = defineStore('captcha', () => {
   const error = computed(() => _error.value)
   const tokens = computed(() => _tokens.value)
   const verified = computed(() => _verified.value)
-  
+
   /**
    * Verifica si un captcha específico está verificado
    * @param instanceId ID de la instancia del captcha
@@ -41,12 +41,13 @@ export const useCaptchaStore = defineStore('captcha', () => {
   const isVerified = (instanceId: string): boolean => {
     return !!_verified.value[instanceId]
   }
-  
+
   /**
    * Obtiene el token de un captcha específico
    * @param instanceId ID de la instancia del captcha
    */
   const getToken = (instanceId: string): string | null => {
+    console.log('getToken', instanceId, _tokens.value[instanceId])
     return _tokens.value[instanceId] || null
   }
 
@@ -57,14 +58,14 @@ export const useCaptchaStore = defineStore('captcha', () => {
   const setInitialized = (value: boolean): void => {
     _isInitialized.value = value
   }
-  
+
   /**
    * Establece el estado de verificación (proceso)
    */
   const setVerifying = (value: boolean): void => {
     _isVerifying.value = value
   }
-  
+
   /**
    * Establece un token para una instancia específica
    */
@@ -78,7 +79,7 @@ export const useCaptchaStore = defineStore('captcha', () => {
       _verified.value[instanceId] = false
     }
   }
-  
+
   /**
    * Establece un error para el captcha
    */
@@ -86,7 +87,7 @@ export const useCaptchaStore = defineStore('captcha', () => {
     _hasError.value = !!error
     _error.value = error
   }
-  
+
   /**
    * Limpia el token de una instancia específica
    */
@@ -94,7 +95,7 @@ export const useCaptchaStore = defineStore('captcha', () => {
     _tokens.value[instanceId] = null
     _verified.value[instanceId] = false
   }
-  
+
   /**
    * Restablece todos los estados
    */
@@ -107,6 +108,10 @@ export const useCaptchaStore = defineStore('captcha', () => {
     _verified.value = {}
   }
 
+  const setVerified = (instanceId: string, value: boolean): void => {
+    _verified.value[instanceId] = value
+  }
+
   return {
     // Estado
     isInitialized,
@@ -115,17 +120,18 @@ export const useCaptchaStore = defineStore('captcha', () => {
     error,
     tokens,
     verified,
-    
+
     // Getters
     isVerified,
     getToken,
-    
+
     // Actions
     setInitialized,
     setVerifying,
+    setVerified,
     setToken,
     setError,
     clearToken,
-    reset
+    reset,
   }
 })

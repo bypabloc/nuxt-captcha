@@ -36,14 +36,20 @@ export const usePreEnrollment = (): PreEnrollmentActions => {
     instanceId: string,
   ): Promise<void> => {
     try {
+      console.log('pre enroll', email, instanceId)
+
       // Obtener el token del captcha usando el instanceId
       const captchaToken = captchaStore.getToken(instanceId)
+
+      console.log('captcha token', captchaToken)
 
       if (!captchaToken) {
         $logger.error('Token de captcha no disponible para', instanceId)
         preEnrollmentStore.finishSubmitting(false, 422)
         return
       }
+
+      console.log('pre enrollment token', captchaToken)
 
       preEnrollmentStore.startSubmitting()
       const response = await testsApi.subscribeTests(
@@ -57,15 +63,14 @@ export const usePreEnrollment = (): PreEnrollmentActions => {
       )
       preEnrollmentStore.finishSubmitting(response.status, response.statusCode)
 
+      console.log('pre enrollment response', response)
+
+      // En el bloque de manejo de errores
       if (!response.status) {
         // Reiniciar el captcha si la respuesta no fue exitosa
-        try {
-          const captchaHandler = useCaptchaHandler()
-          captchaHandler.reset(instanceId)
-          captchaHandler.setVerifying(false)
-        } catch (error) {
-          $logger.error('Error al reiniciar el captcha:', error)
-        }
+        const captchaStore = useCaptchaStore()
+        captchaStore.clearToken(instanceId)
+        captchaStore.setVerified(instanceId, false)
       }
     } catch (error) {
       $logger.error('pre enrollment error', error)

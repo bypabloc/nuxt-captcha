@@ -62,13 +62,9 @@ export const usePartnerEnrollment = (): PartnerEnrollmentActions => {
 
       if (!response.status) {
         // Reiniciar el captcha si la respuesta no fue exitosa
-        try {
-          const captchaHandler = useCaptchaHandler()
-          captchaHandler.reset(instanceId)
-          captchaHandler.setVerifying(false)
-        } catch (error) {
-          $logger.error('Error al reiniciar el captcha:', error)
-        }
+        const captchaStore = useCaptchaStore()
+        captchaStore.clearToken(instanceId)
+        captchaStore.setVerified(instanceId, false)
       }
     } catch (error) {
       $logger.error('partner enrollment error', error)
