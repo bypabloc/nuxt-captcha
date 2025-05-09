@@ -90,24 +90,76 @@ export const useCaptchaHandler = (options: CaptchaHandlerOptions = {}): CaptchaH
       
       try {
         $logger.info('Intentando cargar el script de Turnstile')
-        
+
+        // Verificar si el script ya está en el DOM
+        const existingScript = document.querySelector(
+          'script[src*="turnstile/v0/api.js"]',
+        )
+        if (existingScript) {
+          $logger.info(
+            'Script de Turnstile ya está en el DOM, esperando inicialización',
+          )
+
+          // Si el script ya está en el DOM pero Turnstile no está disponible,
+          // esperar un poco y luego resolver
+          const checkInterval = setInterval(() => {
+            if (typeof window.turnstile !== 'undefined') {
+              clearInterval(checkInterval)
+              $logger.info('Turnstile API detectada tras espera')
+              captchaStore.setInitialized(true)
+              resolve()
+            }
+          }, 100)
+
+          // Establecer un timeout por si acaso
+          setTimeout(() => {
+            clearInterval(checkInterval)
+            if (typeof window.turnstile !== 'undefined') {
+              $logger.info('Turnstile API detectada tras timeout')
+              captchaStore.setInitialized(true)
+              resolve()
+            } else {
+              $logger.error('Timeout esperando a Turnstile API')
+              reject(new Error('Timeout esperando a Turnstile API'))
+            }
+          }, 5000)
+
+          return
+        }
+
         // Definir callback cuando el script se cargue
         window.onloadTurnstileCb = () => {
-          $logger.info('Turnstile API cargada correctamente')
+          $logger.info('Turnstile API cargada correctamente via callback')
           captchaStore.setInitialized(true)
           resolve()
         }
-        
+
         const script = document.createElement('script')
-        script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=onloadTurnstileCb'
+        script.src =
+          'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=onloadTurnstileCb'
         script.async = true
         script.defer = true
-        
+
+        script.onload = () => {
+          $logger.info('Script de Turnstile cargado vía onload')
+          // El callback onloadTurnstileCb debería manejar esto, pero por si acaso
+          setTimeout(() => {
+            if (
+              !captchaStore.isInitialized &&
+              typeof window.turnstile !== 'undefined'
+            ) {
+              $logger.info('Turnstile API detectada vía timeout post-onload')
+              captchaStore.setInitialized(true)
+              resolve()
+            }
+          }, 1000)
+        }
+
         script.onerror = (error) => {
           $logger.error('Error al cargar el script de Turnstile:', error)
           reject(new Error('Error al cargar el script de Turnstile'))
         }
-        
+
         document.head.appendChild(script)
         $logger.info('Script de Turnstile añadido al DOM')
       } catch (error) {

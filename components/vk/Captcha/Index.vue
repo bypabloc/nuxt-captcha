@@ -63,6 +63,9 @@ const emit = defineEmits<{
 // Obtener el logger
 const $logger = useNuxtApp().$logger
 
+const turnstileInitAttempts = ref(0)
+const maxInitAttempts = 5
+
 // Inicializar el manejador de captcha
 const captchaHandler = useCaptchaHandler({
   siteKey: props.siteKey,
@@ -167,7 +170,15 @@ defineExpose({
       :class="['vk-captcha__container', `vk-captcha__container--${theme}`]"
       :data-turnstile-container="true"
       :data-instance-id="instanceId"
-    ></div>
+    >
+      <!-- Indicador de carga mientras se inicializa Turnstile -->
+      <div 
+        v-if="turnstileInitAttempts > 0 && captchaStore && !captchaStore.isInitialized" 
+        class="flex items-center justify-center w-full h-full min-h-[70px]"
+      >
+        <div class="text-sm text-gray-500">Cargando captcha...</div>
+      </div>
+    </div>
     
     <!-- Mensaje de error -->
     <div
